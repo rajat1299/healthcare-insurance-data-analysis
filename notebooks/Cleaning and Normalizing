@@ -1,0 +1,83 @@
+import pandas as pd
+import numpy as np
+
+# Step 1: Load the Downsized Dataset
+file_path = "processed_hospital_data.csv"
+df = pd.read_csv(file_path)
+
+print(f"Loaded dataset: {df.shape[0]} rows, {df.shape[1]} columns")
+
+# Step 2: Data Cleaning
+
+# Remove leading/trailing whitespaces in column names
+df.columns = df.columns.str.strip()
+
+# Check for and handle missing values
+missing_values = df.isnull().sum()
+print("\nMissing Values Before Cleaning:\n", missing_values)
+
+# Fill missing numeric values with the median
+numeric_columns = ["Gross Charge", "Insurance Pricing", "Minimum Price", "Maximum Price"]
+for col in numeric_columns:
+    if df[col].isnull().sum() > 0:
+        median_value = df[col].median()
+        df[col].fillna(median_value, inplace=True)
+        print(f"Filled missing values in '{col}' with median: {median_value}")
+
+# Drop rows with missing critical identifiers (e.g., Hospital Name, CMS Certification Number)
+df.dropna(subset=["Hospital Name", "CMS Certification Number"], inplace=True)
+print(f"\nRows after dropping invalid entries: {df.shape[0]}")
+
+# Remove duplicates
+duplicate_count = df.duplicated().sum()
+print(f"\nDuplicate Rows Found: {duplicate_count}")
+df.drop_duplicates(inplace=True)
+print(f"Rows after removing duplicates: {df.shape[0]}")
+
+# Step 3: Data Normalization
+
+# Normalize numeric columns using Min-Max Scaling
+from sklearn.preprocessing import MinMaxScaler
+
+scaler = MinMaxScaler()
+df[numeric_columns] = scaler.fit_transform(df[numeric_columns])
+
+print("\nNormalized Numeric Columns:")
+print(df[numeric_columns].head())
+
+# Step 4: Standardize Text Columns
+# Convert state and city names to title case
+df["State"] = df["State"].str.title()
+df["City"] = df["City"].str.title()
+
+# Remove any extra spaces in text columns
+text_columns = ["Hospital Name", "City", "State"]
+for col in text_columns:
+    df[col] = df[col].str.strip()
+
+# Step 5: Validate Cleaned and Normalized Data
+
+def validate_cleaned_data(df):
+    """
+    Perform data integrity checks on the cleaned and normalized dataset.
+    """
+    # Check for remaining missing values
+    print("\nMissing Values After Cleaning:\n", df.isnull().sum())
+
+    # Ensure all numeric columns are within [0, 1] after normalization
+    for col in numeric_columns:
+        assert df[col].between(0, 1).all(), f"Column '{col}' contains values outside [0, 1] range!"
+
+    # Check for duplicate rows
+    duplicate_count = df.duplicated().sum()
+    print(f"\nDuplicate Rows After Cleaning: {duplicate_count}")
+
+    print("\nData validation completed successfully!")
+
+# Run validation
+validate_cleaned_data(df)
+
+# Step 6: Save Cleaned and Normalized Dataset
+output_file = "processed_hospital_data.csv"
+df.to_csv(output_file, index=False)
+print(f"\nCleaned and normalized dataset saved to '{output_file}'")
