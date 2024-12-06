@@ -1,0 +1,89 @@
+import pandas as pd
+
+# Function to load the dataset in chunks
+def load_dataset(file_path, chunksize=10**6):
+    """
+    Load the large CSV dataset in chunks to optimize memory usage.
+    """
+    print("Loading dataset...")
+    chunks = pd.read_csv(file_path, chunksize=chunksize, low_memory=False)
+    return pd.concat(chunks, ignore_index=True)
+
+# Step 1: Load and Explore the Original Dataset
+file_path = "hospital_pricing.csv"  # Path to the original dataset
+columns_to_load = [
+    "CMS Certification Number",
+    "Hospital Name",
+    "State",
+    "City",
+    "Zip Code",
+    "Gross Charge",
+    "Insurance Pricing",
+    "Minimum Price",
+    "Maximum Price",
+    "Internal Code"
+]  # Load only necessary columns to optimize performance
+
+# Load only required columns
+original_data = load_dataset(file_path)
+
+# Display structure of the dataset
+print(f"Dataset Loaded: {original_data.shape[0]} rows, {original_data.shape[1]} columns")
+print("Columns:", original_data.columns)
+
+# Step 2: Filter the Dataset to Include Only Selected States and Hospitals
+# Define the states and hospitals to include
+selected_states = ["California", "Texas", "Florida", "New York"]
+selected_hospitals_per_state = 2
+
+# Filter by states
+filtered_data = original_data[original_data["State"].isin(selected_states)]
+
+# Select only two hospitals per state
+filtered_hospitals = filtered_data.groupby("State").head(selected_hospitals_per_state)
+
+# Step 3: Select Relevant Columns
+# Columns to retain
+columns_to_keep = [
+    "CMS Certification Number",
+    "Hospital Name",
+    "City",
+    "State",
+    "Insurance Pricing",
+    "Gross Charge",
+    "Minimum Price",
+    "Maximum Price"
+]
+
+downsized_data = filtered_hospitals[columns_to_keep]
+
+# Step 4: Validate the Downsized Dataset
+def validate_dataset(df):
+    """
+    Validate the downsized dataset for integrity.
+    """
+    # Check for duplicate rows
+    duplicate_count = df.duplicated().sum()
+    print(f"Duplicate Rows: {duplicate_count}")
+    
+    # Check for missing values
+    missing_values = df.isnull().sum()
+    print("\nMissing Values:\n", missing_values)
+    
+    # Ensure only the selected states are present
+    unique_states = df["State"].unique()
+    print("\nUnique States in Dataset:", unique_states)
+    assert set(unique_states).issubset(set(selected_states)), "Dataset contains unselected states!"
+    
+    # Check row count (should not exceed 8 hospitals)
+    total_hospitals = df["Hospital Name"].nunique()
+    print(f"\nTotal Hospitals in Dataset: {total_hospitals}")
+    assert total_hospitals <= 8, "More than 8 hospitals in downsized dataset!"
+
+# Validate downsized data
+validate_dataset(downsized_data)
+
+# Step 5: Save the Filtered Dataset to a New CSV File
+output_file = "processed_hospital_data.csv"
+downsized_data.to_csv(output_file, index=False)
+print(f"Downsized dataset saved to '{output_file}'")
