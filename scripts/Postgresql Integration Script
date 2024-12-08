@@ -1,0 +1,53 @@
+import psycopg2
+from sqlalchemy import create_engine
+
+# Database connection details
+db_config = {
+    'user': 'Dcp_project_data',
+    'password': 'dcpprojectdata',
+    'host': 'fidelitydbinstance.croi8mk4ezwa.us-east-1.rds.amazonaws.com',
+    'port': '5432',
+    'database': 'hospitalsdb'
+}
+
+# Create a connection engine
+try:
+    engine = create_engine(f"postgresql://{db_config['user']}:{db_config['password']}@{db_config['host']}:{db_config['port']}/{db_config['database']}")
+    print("Connection to PostgreSQL database was successful.")
+except Exception as e:
+    print("Error connecting to PostgreSQL database:", e)
+    raise
+
+# Replace 'df' with the name of your DataFrame
+def save_to_postgresql(dataframe, table_name):
+    """
+    Save a Pandas DataFrame to the PostgreSQL database.
+    :param dataframe: Pandas DataFrame to save
+    :param table_name: Name of the table in the database
+    """
+    try:
+        dataframe.to_sql(table_name, engine, if_exists='replace', index=False)
+        print(f"Data successfully written to the table '{table_name}' in PostgreSQL database.")
+    except Exception as e:
+        print("Error writing data to PostgreSQL:", e)
+        raise
+
+# Example Usage
+if __name__ == "__main__":
+    import pandas as pd
+
+    # Example DataFrame (Replace with the actual DataFrame)
+    data = {
+        'CMS Certification Number': [12345, 67890],
+        'Hospital Name': ['Hospital A', 'Hospital B'],
+        'City': ['City X', 'City Y'],
+        'State': ['State 1', 'State 2'],
+        'Insurance Pricing': [5000, 7000],
+        'Gross Charge': [5500, 7500],
+        'Minimum Price': [4800, 6800],
+        'Maximum Price': [6000, 8000]
+    }
+    df = pd.DataFrame(data)
+
+    # Save the DataFrame to the database
+    save_to_postgresql(df, 'hospital_pricing')
